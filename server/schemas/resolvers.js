@@ -1,22 +1,20 @@
-// Use the functionality in the user-controller.js as a guide.
-const { AuthenticationError } = require('apollo-server-express');
 const { User } = require('../models');
-const { signToken } = require('../utils/auth');
+const { signToken, AuthenticationError } = require('../utils/auth');
 
-// Query type: me : Which returns a User type.
 const resolvers = {
   Query: {
     me: async (parent, args, context) => {
       if (context.user) {
-        const userData = await User.findOne({ _id: context.user._id })
-          .populate("savedBooks")
-          .select("-__v -password");
-        console.log(userData);
-
+        const userData = await User.findById(context.user._id).select("-__v -password").populate("book");
         return userData;
       }
-
       throw new AuthenticationError("Not logged in");
+    },
+    users: async () => {
+      return User.find().select("-__v -password").populate("book");
+    },
+    user: async (parent, { username }) => {
+      return User.findOne({ username }).select("-__v -password").populate("book");
     },
   },
 
@@ -44,24 +42,24 @@ const resolvers = {
       return { token, user };
     },
 
-    //fixed books returning on the Saved books page by page passing in args, removing input and adding to se the savedbooks args.book instead of input
-    saveBook: async (parent, args, context) => {
+    saveBook: async (parent, { bookInput }, context) => {
+     console.log(context.user._id)
       if (context.user) {
-        console.log(args);
         const updatedUser = await User.findByIdAndUpdate(
-          { _id: context.user._id },
-          { $addToSet: { savedBooks: args.book } },
+          context.user._id ,
+          { $addToSet: { savedBooks: bookInput } },
           { new: true }
         );
-        return updatedUser;
+        return updatedUser; // Returning only the saved book
       }
       throw new AuthenticationError("You need to be logged in!");
     },
-    removeBook: async (parent, args, context) => {
+
+    removeBook: async (parent, { bookId }, context) => {
       if (context.user) {
-        const updatedUser = await User.findOneAndUpdate(
-          { _id: context.user._id },
-          { $pull: { savedBooks: { bookId: args.bookId } } },
+        const updatedUser = await User.findByIdAndUpdate(
+         { _id: context.user._id },
+          { $pull: { savedBooks: { bookId } } },
           { new: true }
         );
         return updatedUser;

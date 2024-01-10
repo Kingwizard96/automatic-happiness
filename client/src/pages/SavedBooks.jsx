@@ -6,20 +6,24 @@ import {
   Col
 } from 'react-bootstrap';
 
+import { useQuery, useMutation } from '@apollo/client';
+
+import { GET_ME } from '../utils/queries';
+// import { getMe, deleteBook } from '../utils/API';
+
 import Auth from '../utils/auth';
 import { removeBookId } from '../utils/localStorage';
-// need these to refactor for GraphQL API
-import { useQuery, useMutation } from '@apollo/client';
 import { REMOVE_BOOK } from '../utils/mutations';
-import { GET_ME } from '../utils/queries';
 
 const SavedBooks = () => {
   const { loading, data } = useQuery(GET_ME);
-  const [removeBook, { error }] = useMutation(REMOVE_BOOK);
-  
-  const userData = data?.me || {};
 
-  // function to delete book from database
+  //useEffect no longer needed for this
+  const [RemoveBook] = useMutation(REMOVE_BOOK);
+
+  const userData = data?.me || [];
+  console.log(userData)
+
   const handleDeleteBook = async (bookId) => {
     const token = Auth.loggedIn() ? Auth.getToken() : null;
 
@@ -28,24 +32,20 @@ const SavedBooks = () => {
     }
 
     try {
-    const response = await removeBook({ variables: { bookId } });
-        console.log('Deleted record: ', response);
-        if (error) {
-          console.log(error);
-        }
-      // also remove from Localstorage
-      removeBookId(bookId);
+      const response  = await RemoveBook({
+        variables: { bookId },
+      });
+
+      removeBookId(bookId)
+
     } catch (err) {
-      // display any caught errors here
-        console.error(err);
+      console.error(err);
     }
   };
 
-  // if data isn't here yet, say so
   if (loading) {
     return <h2>LOADING...</h2>;
   }
-
 
   return (
     <>
@@ -83,5 +83,6 @@ const SavedBooks = () => {
     </>
   );
 };
+
 
 export default SavedBooks;
